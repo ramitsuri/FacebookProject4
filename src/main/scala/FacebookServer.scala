@@ -37,7 +37,6 @@ trait RestApi extends HttpService with ActorLogging {
           complete {
             {
               val userActor = context.actorSelection(userActorBasePath + userID)
-              implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
               val future: User = Await.result(userActor ? GetUserDetails(), timeout.duration).asInstanceOf[User]
               future
             }
@@ -50,7 +49,6 @@ trait RestApi extends HttpService with ActorLogging {
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + userID)
-              implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
               val future: Array[WallPost] = Await.result(userActor ? GetAllPosts(), timeout.duration).asInstanceOf[Array[WallPost]]
               future
             }
@@ -62,7 +60,6 @@ trait RestApi extends HttpService with ActorLogging {
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + userID)
-              implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
               val future: WallPost = Await.result(userActor ? GetWallPost(postID), timeout.duration).asInstanceOf[WallPost]
               future
             }
@@ -76,7 +73,6 @@ trait RestApi extends HttpService with ActorLogging {
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + profileID)
-              implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
               val future: Profile = Await.result(userActor ? GetProfile(), timeout.duration).asInstanceOf[Profile]
               future
             }
@@ -89,7 +85,6 @@ trait RestApi extends HttpService with ActorLogging {
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + userID)
-              implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
               val future: FriendList = Await.result(userActor ? GetFriendList(), timeout.duration).asInstanceOf[FriendList]
               future
             }
@@ -187,7 +182,6 @@ trait RestApi extends HttpService with ActorLogging {
             complete {
               {
                 val masterActor = context.actorSelection(masterActorBasePath)
-                implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
                 val future: Array[User] = Await.result(masterActor ? GetAllUsers(), timeout.duration).asInstanceOf[Array[User]]
                 future
               }
@@ -230,7 +224,6 @@ trait RestApi extends HttpService with ActorLogging {
             complete {
               {
                 val masterActor = context.actorSelection(masterActorBasePath)
-                implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
                 val future: Int = Await.result(masterActor ? GetNumberOfUsers(), timeout.duration).asInstanceOf[Int]
                 future.toString
               }
@@ -244,7 +237,6 @@ trait RestApi extends HttpService with ActorLogging {
           complete {
             {
               val pageActor = context.actorSelection(pageActorBasePath + pageID)
-              implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
               val future: Page = Await.result(pageActor ? GetPage(), timeout.duration).asInstanceOf[Page]
               future
             }
