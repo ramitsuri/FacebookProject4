@@ -3,6 +3,11 @@ package com.ramitsuri.project4
 
 import spray.json.{RootJsonFormat, DefaultJsonProtocol}
 
-/**
- * Created by ramit on 11/26/2015.
- */
+
+object NewJsonProtocol extends DefaultJsonProtocol {
+  implicit val wallPostFormat: RootJsonFormat[WallPost] = jsonFormat3(WallPost)
+  implicit val userFormat: RootJsonFormat[User] = jsonFormat3(User)
+  implicit val friendListFormat: RootJsonFormat[FriendList] = jsonFormat2(FriendList)
+  implicit val profileFormat: RootJsonFormat[Profile] = jsonFormat3(Profile)
+  implicit val pageFormat: RootJsonFormat[Page] = jsonFormat4(Page)
+}
