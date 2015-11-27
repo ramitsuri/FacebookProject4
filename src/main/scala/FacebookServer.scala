@@ -2,7 +2,7 @@ package com.ramitsuri.project4
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Props, ActorSystem, Actor}
+import akka.actor.{ActorLogging, Props, ActorSystem, Actor}
 import akka.util.Timeout
 import spray.json.{RootJsonFormat, DefaultJsonProtocol}
 import spray.routing._
@@ -41,9 +41,11 @@ case class Start()
 
 case class GetAllUsers()
 
-case class AddUser()
+case class AddUser(name: String)
 
-case class DeleteUser()
+case class DeleteUser(id: String)
+
+case class GetNumberOfUsers()
 
 case class AddPage()
 
@@ -52,6 +54,8 @@ case class DeletePage()
 case class UpdatePage()
 
 case class GetPage()
+
+case class Test()
 
 
 //Message classes for User Actor
@@ -193,21 +197,67 @@ class UserActor(id: String, var name: String) extends Actor {
 class MasterActor extends Actor {
 
   var numberOfUsers = 10
+  var usersIDs: Vector[String] = Vector[String]()
+  var users: Vector[User] = Vector[User]()
+  val userActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor/user"
+
+  def start() = {
+    for (i <- 1 to numberOfUsers) {
+      var user = context.actorOf(Props(new UserActor(i.toString, "name" + i)), name = "user" + i)
+      usersIDs = usersIDs :+ i.toString
+    }
+  }
+
+  def getAllUsers() = {
+    for (i <- 1 to numberOfUsers) {
+      val userActor = context.actorSelection(userActorBasePath + i)
+      implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
+      val future: User = Await.result(userActor ? GetUserDetails(), timeout.duration).asInstanceOf[User]
+      users = users :+ future
+    }
+    users.toArray
+  }
+
+  def addUser(name: String) = {
+    numberOfUsers = numberOfUsers + 1
+    var user = context.actorOf(Props(new UserActor(numberOfUsers.toString, name)), name = "user" + numberOfUsers)
+    usersIDs = usersIDs :+ numberOfUsers.toString
+  }
+
+  def deleteUser(id: String) = {
+    numberOfUsers = numberOfUsers - 1
+    usersIDs = usersIDs.filterNot(_ == id)
+  }
+
+  def getNumberOfUsers() = {
+    numberOfUsers
+  }
 
   def receive = {
 
-    case Start() => {
-      for (i <- 0 to numberOfUsers) {
-        var user = context.actorOf(Props(new UserActor(i.toString, "name" + i)), name = "user" + i)
-        println(user.path)
-      }
+    case Test() => {
+      println(self.path)
     }
 
-    case GetAllUsers() => {}
+    case Start() => {
+      start()
+    }
 
-    case AddUser() => {}
+    case GetAllUsers() => {
+      sender ! getAllUsers()
+    }
 
-    case DeleteUser() => {}
+    case AddUser(name: String) => {
+      addUser(name)
+    }
+
+    case DeleteUser(id: String) => {
+      deleteUser(id)
+    }
+
+    case GetNumberOfUsers() => {
+     sender ! getNumberOfUsers()
+    }
 
     case AddPage() => {}
 
@@ -228,7 +278,7 @@ class FacebookServer extends HttpServiceActor with RestApi {
   def receive = runRoute(routes)
 }
 
-trait RestApi extends HttpService {
+trait RestApi extends HttpService with ActorLogging {
   actor: Actor =>
   implicit val timeout = Timeout(10 seconds)
   //implicit val system = ActorSystem("FacebookSystem")
@@ -240,6 +290,8 @@ trait RestApi extends HttpService {
     import NewJsonProtocol._
     //Get a user
     val userActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor/user"
+    val masterActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor"
+
     path("users" / "getUser" / Segment) { userID =>
       get {
         respondWithMediaType(`application/json`) {
@@ -389,6 +441,63 @@ trait RestApi extends HttpService {
           }
         }
       }
+      } ~ //get all users
+      path("users" / "getAllUsers") {
+        get {
+          respondWithMediaType(`application/json`) {
+            complete {
+              {
+                val masterActor = context.actorSelection(masterActorBasePath)
+                implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
+                val future: Array[User] = Await.result(masterActor ? GetAllUsers(), timeout.duration).asInstanceOf[Array[User]]
+                future
+              }
+            }
+          }
+        }
+      }~ //add a user
+      path("users" / "addUSer") {
+        post {
+          respondWithMediaType(`text/plain`) {
+            entity(as[String]) { name =>
+            complete {
+              {
+                val masterActor = context.actorSelection(masterActorBasePath)
+                masterActor ! AddUser(name)
+                "OK"
+              }
+            }}
+          }
+        }
+      }~ //delete a user
+      path("users" / "deleteUser") {
+        delete {
+          respondWithMediaType(`text/plain`) {
+            entity(as[String]) { idToDelete =>
+            complete {
+              {
+                val masterActor = context.actorSelection(masterActorBasePath)
+                masterActor ! DeleteUser(idToDelete)
+                "OK"
+              }
+            }
+            }
+          }
+        }
+      }~ //get number of users
+      path("users" / "getNumberOfUsers") {
+        get {
+          respondWithMediaType(`application/json`) {
+            complete {
+              {
+                val masterActor = context.actorSelection(masterActorBasePath)
+                implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
+                val future: Int = Await.result(masterActor ? GetNumberOfUsers(), timeout.duration).asInstanceOf[Int]
+                future.toString
+              }
+            }
+          }
+        }
       }
 
   }
