@@ -21,7 +21,7 @@ trait RestApi extends HttpService with ActorLogging {
   implicit val timeout = Timeout(10 seconds)
   //implicit val system = ActorSystem("FacebookSystem")
 
-  val masterActor = context.actorOf(Props(new MasterActor(10, 10)), name = "masterActor")
+  val masterActor = context.actorOf(Props(new MasterActor(10000, 1000)), name = "masterActor")
   masterActor ! Start()
 
   def routes: Route = pathPrefix("project4") {
