@@ -29,12 +29,18 @@ class UserActor(id: String, var name: String) extends Actor {
   var userInfo: User = new User(id, name, Vector[WallPost]())
   var friendList: FriendList = new FriendList(id, Vector[String]())
   var profile: Profile = new Profile(id, userInfo, friendList)
-
+  var postsCount = getPostsCount()
 
   def getUserInfo() = {
     userInfo
   }
 
+  def getPostsCount() = {
+    userInfo.posts.length
+  }
+  def updatePostCount() = {
+    postsCount = postsCount + 1
+  }
   def editUserInfo(user: User) = {
     userInfo.name = user.name
     userInfo.posts = user.posts
@@ -48,7 +54,8 @@ class UserActor(id: String, var name: String) extends Actor {
   }
 
   def addWallPost(wallPost: WallPost) = {
-    userInfo.posts = userInfo.posts :+ wallPost
+    userInfo.posts = userInfo.posts :+ new WallPost((postsCount+1).toString, postedBy = wallPost.postedBy, content = wallPost.content)
+    updatePostCount()
     updateProfile()
   }
 

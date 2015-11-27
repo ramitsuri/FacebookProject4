@@ -22,37 +22,6 @@ object Client extends App {
   implicit val clientSystem = ActorSystem("ClientSystem")
   import clientSystem.dispatcher
 
-
-  /*val pipeline: HttpRequest => Future[User] = sendReceive ~> unmarshal[User]
-  val f: Future[User] = pipeline(Get(s"$apiLocation/users/getUser/10"))
-  val user = Await.result(f, timeout)
-  println(user.name)
-
-  //post
-  var post1: WallPost = WallPost("post1", "user1", "this is a test post")
-  var post2: WallPost = WallPost("post2", "user2", "this is a test post")
-  var post3: WallPost = WallPost("post3", "user3", "this is a test post")
-  var post4: WallPost = WallPost("post4", "user4", "this is a test post")
-
-  var posts = Vector[WallPost]()
-  posts = posts :+ post1 :+ post2 :+ post3 :+ post4
-  val pipeline2: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-  val f2: Future[String] = pipeline2(Post(s"$apiLocation/users/addUser", "Ramit"))
-  val result2 = Await.result(f, timeout)
-  println(result2)
-
-  //put
-  val userToUpdate = new User("11", "Ramit Suri", posts)
-  val pipeline3: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-  val f3: Future[String] = pipeline2(Put(s"$apiLocation/users/11/editProfile", userToUpdate))
-  val result3 = Await.result(f, timeout)
-  println(result3)
-    //delete
-    val pipeline4: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-    val f4: Future[String] = pipeline4(Delete(s"$apiLocation/users/deleteUser", "11"))
-    val result4 = Await.result(f, timeout)*/
-
-
   val pipelineNumOfUsers: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
   val futureNumOfUsers: Future[String] = pipelineNumOfUsers(Get(s"$apiLocation/users/getNumberOfUsers"))
   val numOfUsers: Int = Integer.parseInt(Await.result(futureNumOfUsers, timeout))
@@ -84,11 +53,12 @@ object Client extends App {
 
 class ClientActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers: Int, int1: Int, int2: Int) extends Actor{
   val userID = id
-  val location = apiLocation
+  var location = apiLocation
   val interval1= int1
   val interval2 = int2
   val numberOfUsers = numOfUsers
-  val timeout = 5.seconds
+  val timeout = 15.seconds
+  var profile: Profile = new Profile("", new User("", "", Vector[WallPost]()), new FriendList("", Vector[String]()))
   private var scheduler1: Cancellable = _
   private var scheduler2: Cancellable = _
   implicit val clientSystem = sys
@@ -110,34 +80,41 @@ class ClientActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers: Int
   def receive = {
 
     case RequestBatch1() => {
-      val randomID = Random.nextInt(numberOfUsers-1) + 1
-
-      val pipelineGetProfile: HttpRequest => Future[User] = sendReceive ~> unmarshal[User]
-      val futureGetProfile: Future[User] = pipelineGetProfile(Get(s"%s%s%d".format(apiLocation,"/users/getProfile/", randomID)))
+      var randomID = Random.nextInt(numberOfUsers)
+      if(randomID==0)
+        randomID = 1
+      val pipelineGetProfile: HttpRequest => Future[Profile] = sendReceive ~> unmarshal[Profile]
+      val futureGetProfile: Future[Profile] = pipelineGetProfile(Get(s"%s%s%d".format(apiLocation,"/users/getProfile/", randomID)))
       val result2 = Await.result(futureGetProfile, timeout)
-      println(result2.name)
+      profile = result2
+      println(result2.user.name)
 
-      /*val pipelineAddFriend: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-      val futureAddFriend: Future[String] = pipelineAddFriend(Post(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/getProfile")))
+      val pipelineAddFriend: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
+      val futureAddFriend: Future[String] = pipelineAddFriend(Post(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/addFriend"), "user" + randomID))
       val result3 = Await.result(futureAddFriend, timeout)
+      println("friended "+result3)
 
+      val post: WallPost = new WallPost("", "user"+ randomID, "This is a new wall post")
       val pipelinePostOnWall: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-      val futurePostOnWall: Future[String] = pipelinePostOnWall(Post(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/posts/post")))
-      val result1 = Await.result(futurePostOnWall, timeout)*/
-
+      val futurePostOnWall: Future[String] = pipelinePostOnWall(Post(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/posts/post"), post))
+      val result1 = Await.result(futurePostOnWall, timeout)
+      println("posted "+result1)
     }
 
     case RequestBatch2() => {
-      val randomID = Random.nextInt(numberOfUsers-1) + 1
-
-     /* val pipelineFriendList: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-      val futureFriendList: Future[String] = pipelineFriendList(Get(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/getFriendList")))
+      var randomID = Random.nextInt(numberOfUsers)
+      if(randomID==0)
+        randomID = 1
+      val pipelineFriendList: HttpRequest => Future[FriendList] = sendReceive ~> unmarshal[FriendList]
+      val futureFriendList: Future[FriendList] = pipelineFriendList(Get(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/getFriendList")))
       val result1 = Await.result(futureFriendList, timeout)
+      println(result1.members.length + " friends")
 
+      val updatedUser = new User(profile.user.id, "new name", profile.user.posts)
       val pipelineEditProfile: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-      val futureEditProfile: Future[String] = pipelineEditProfile(Put(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/editProfile")))
-      val result2 = Await.result(futureEditProfile, timeout)*/
-
+      val futureEditProfile: Future[String] = pipelineEditProfile(Put(s"%s%s%d%s".format(apiLocation,"/users/", randomID, "/editProfile"), updatedUser))
+      val result2 = Await.result(futureEditProfile, timeout)
+      println("updated profile "+ result2)
     }
   }
 
