@@ -19,8 +19,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-remote" % "2.3.10",
   "net.liftweb" %% "lift-json" % "2.6.2",
   "com.typesafe.akka" %% "akka-slf4j" % "2.3.11",
-  "ch.qos.logback" % "logback-classic" % "1.0.13"
-
+  "ch.qos.logback" % "logback-classic" % "1.0.13",
+  "commons-codec" % "commons-codec" % "1.9"
 
 )
 resolvers ++= Seq(

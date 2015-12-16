@@ -90,6 +90,8 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
   private var scheduler1: Cancellable = _
   private var scheduler2: Cancellable = _
   private var scheduler3: Cancellable = _
+  private var privateAESKeyForName: String = generatePrivateKeyForAES()
+  private var privateAESKeyForPost: String = generatePrivateKeyForAES()
   implicit val clientSystem = sys
   val clientUserActorBasePath = "akka://ClientSystem/user/clientUserActor"
   import clientSystem.dispatcher
@@ -108,15 +110,25 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
     scheduler1.cancel()
     scheduler2.cancel()
   }
-
+  private def generatePrivateKeyForAES(): String = {
+    val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
+    val sb = new StringBuilder
+    val random = new scala.util.Random(new java.security.SecureRandom())
+    for (i <- 1 to 10) {
+      val randomNum = random.nextInt(chars.length)
+      sb.append(chars(randomNum))
+    }
+    sb.toString + userID
+  }
 
   def receive = {
 
     case SignUpUser() => {
 
       try{
+        val name = Encryption.AES.encrypt(privateAESKeyForName, "name" + userID )
         val pipelineAddUser: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-        val futureAddUser: Future[String] = pipelineAddUser(Post(s"%s%s".format(apiLocation, "/users/addUser"), "name" + userID))
+        val futureAddUser: Future[String] = pipelineAddUser(Post(s"%s%s".format(apiLocation, "/users/addUser"), name))
         val result2 = Await.result(futureAddUser, timeout)
       }
       catch {
@@ -136,17 +148,17 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
           randomID = 1
       try {
         val pipelineGetProfile: HttpRequest => Future[Profile] = sendReceive ~> unmarshal[Profile]
-        val futureGetProfile: Future[Profile] = pipelineGetProfile(Get(s"%s%s%d".format(apiLocation, "/users/getProfile/", randomID)))
+        val futureGetProfile: Future[Profile] = pipelineGetProfile(Get(s"%s%s%d".format(apiLocation, "/users/getProfile/", userID)))
         val result2 = Await.result(futureGetProfile, timeout)
         profile = result2
-        println("User "+result2.user.name)
+        println("User "+ Encryption.AES.decrypt(privateAESKeyForName, result2.user.name))
 
         val pipelineAddFriend: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futureAddFriend: Future[String] = pipelineAddFriend(Post(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/addFriend"), "user" + randomID))
         val result3 = Await.result(futureAddFriend, timeout)
         println("Friended " + result3)
 
-        val post: WallPost = new WallPost("", "user" + randomID, "This is a new wall post")
+        val post: WallPost = new WallPost("", "user" + randomID, Encryption.AES.encrypt(privateAESKeyForPost, "This is a new wall post"))
         val pipelinePostOnWall: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futurePostOnWall: Future[String] = pipelinePostOnWall(Post(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/posts/post"), post))
         val result1 = Await.result(futurePostOnWall, timeout)
@@ -154,6 +166,7 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
       }
       catch {
         case ex: java.util.concurrent.TimeoutException => {}
+        case ex: Exception => {}
       }
     }
 
@@ -168,7 +181,8 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         val result1 = Await.result(futureFriendList, timeout)
         println(result1.members.length + " Friends")
 
-        val updatedUser = new User(profile.user.id, "new name", profile.user.posts, profile.user.privateKey)
+        val newName = Encryption.AES.encrypt(privateAESKeyForName, "new name")
+        val updatedUser = new User(profile.user.id, newName, profile.user.posts, profile.user.privateKey)
         val pipelineEditProfile: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futureEditProfile: Future[String] = pipelineEditProfile(Put(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/editProfile"), updatedUser))
         val result2 = Await.result(futureEditProfile, timeout)
@@ -176,6 +190,7 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
       }
       catch {
         case ex: java.util.concurrent.TimeoutException => {}
+        case ex: Exception => {}
       }
     }
   }

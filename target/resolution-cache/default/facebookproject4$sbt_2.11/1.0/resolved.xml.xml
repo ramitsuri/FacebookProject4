@@ -4,7 +4,7 @@
 		module="facebookproject4$sbt_2.11"
 		revision="1.0"
 		status="integration"
-		publication="20151126185437"
+		publication="20151216113808"
 	/>
 	<configurations>
 		<conf name="default" visibility="public"/>

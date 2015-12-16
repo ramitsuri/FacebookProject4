@@ -71,7 +71,7 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     lastID = lastID + 1
     var user = context.actorOf(Props(new UserActor(lastID.toString, name, privateKey)), name = "user" + lastID)
     usersIDs = usersIDs :+ lastID.toString
-    println("added " + lastID)
+    println("added " + lastID  + name)
   }
 
   def deleteUser(id: String) = {
