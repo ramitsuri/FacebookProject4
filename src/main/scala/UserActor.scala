@@ -25,8 +25,12 @@ case class GetFriendList()
 
 case class GetProfile()
 
-class UserActor(id: String, var name: String) extends Actor {
-  var userInfo: User = new User(id, name, Vector[WallPost]())
+case class Message1()
+
+case class Message2()
+
+class UserActor(id: String, var name: String, privateKey: String) extends Actor {
+  var userInfo: User = new User(id, name, Vector[WallPost](), privateKey)
   var friendList: FriendList = new FriendList(id, Vector[String]())
   var profile: Profile = new Profile(id, userInfo, friendList)
   var postsCount = getPostsCount()
@@ -135,10 +139,18 @@ class UserActor(id: String, var name: String) extends Actor {
       sender ! profile
     }
 
+    case Message1() => {
+      sender ! Message2()
+    }
+
+    case Message2() => {
+
+    }
+
 
   }
 
-  implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts)
+  implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts, privateKey = user.privateKey)
 
   implicit def toPost(post: WallPost): WallPost = WallPost(id = post.id, postedBy = post.postedBy, content = post.content)
 

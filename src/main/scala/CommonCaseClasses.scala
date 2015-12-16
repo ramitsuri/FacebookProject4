@@ -1,7 +1,7 @@
 package com.ramitsuri.project4
 
 
-case class User(id: String, var name: String, var posts: Vector[WallPost])
+case class User(id: String, var name: String, var posts: Vector[WallPost], privateKey: String)
 
 case class WallPost(id: String, postedBy: String, var content: String)
 

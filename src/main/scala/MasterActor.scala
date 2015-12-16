@@ -13,11 +13,13 @@ case class Start()
 
 case class GetAllUsers()
 
-case class AddUser(name: String)
+case class AddUser(name: String, privateKey: String)
 
 case class DeleteUser(id: String)
 
 case class GetNumberOfUsers()
+
+case class GetNumberOfPages()
 
 case class AddPage(name: String, owner: String)
 
@@ -37,12 +39,13 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
   val userActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor/user"
   var hasRunOnceUsers = false
   var hasRunOncePages = false
+  var lastID: Int = 0
 
   def start() = {
-    for (i <- 1 to numberOfUsers) {
-      var user = context.actorOf(Props(new UserActor(i.toString, "name" + i)), name = "user" + i)
-      usersIDs = usersIDs :+ i.toString
-    }
+    /*for (i <- 1 to numberOfUsers) {*/
+      //var user = context.actorOf(Props(new UserActor(i.toString, "name" + i)), name = "user" + i)
+      //usersIDs = usersIDs :+ i.toString
+   /* }*/
 
     for (i <- 1 to numberOfPages) {
       var page = context.actorOf(Props(new PagesActor(i.toString, "owner" + i, "name" + i)), name = "page" + i)
@@ -63,10 +66,12 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     users.toArray
   }
 
-  def addUser(name: String) = {
-    numberOfUsers = numberOfUsers + 1
-    var user = context.actorOf(Props(new UserActor(numberOfUsers.toString, name)), name = "user" + numberOfUsers)
-    usersIDs = usersIDs :+ numberOfUsers.toString
+  def addUser(name: String, privateKey: String) = {
+    //numberOfUsers = numberOfUsers + 1
+    lastID = lastID + 1
+    var user = context.actorOf(Props(new UserActor(lastID.toString, name, privateKey)), name = "user" + lastID)
+    usersIDs = usersIDs :+ lastID.toString
+    println("added " + lastID)
   }
 
   def deleteUser(id: String) = {
@@ -76,6 +81,10 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
 
   def getNumberOfUsers() = {
     numberOfUsers
+  }
+
+  def getNumberOfPages() = {
+    numberOfPages
   }
 
   def addPage(name: String, owner: String) = {
@@ -105,8 +114,8 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
       sender ! getAllUsers()
     }
 
-    case AddUser(name: String) => {
-      addUser(name)
+    case AddUser(name: String, privateKey: String) => {
+      addUser(name, privateKey)
     }
 
     case DeleteUser(id: String) => {
@@ -125,6 +134,9 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
       deletePage(id)
     }
 
+    case GetNumberOfPages() => {
+      sender ! getNumberOfPages()
+    }
     
 
 

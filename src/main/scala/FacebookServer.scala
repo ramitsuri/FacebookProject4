@@ -19,20 +19,23 @@ class FacebookServer extends HttpServiceActor with RestApi {
 trait RestApi extends HttpService with ActorLogging {
   actor: Actor =>
   implicit val timeout = Timeout(10 seconds)
-  //implicit val system = ActorSystem("FacebookSystem")
 
-  val masterActor = context.actorOf(Props(new MasterActor(10, 100)), name = "masterActor")
+
+  val masterActor = context.actorOf(Props(new MasterActor(10000, 1000)), name = "masterActor")
   masterActor ! Start()
+
+  val statisticsActor = context.actorOf((Props(new StatisticsActor)), name = "statisticsActor")
 
   def routes: Route = pathPrefix("project4") {
     import NewJsonProtocol._
-    //Get a user
+
     val userActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor/user"
     val pageActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor/page"
     val masterActorBasePath = "akka://FaceBookSystem/user/httpInterface/masterActor"
 
     path("users" / "getUser" / Segment) { userID =>
       get {
+        statisticsActor ! RequestStatistics()
         respondWithMediaType(`application/json`) {
           complete {
             {
@@ -46,6 +49,7 @@ trait RestApi extends HttpService with ActorLogging {
     } ~ //get all posts for a user
       path("users" / Segment / "posts" / "getPosts") { userID =>
         get {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + userID)
@@ -57,6 +61,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //get single post for a user
       path("users" / Segment / "posts" / "getSinglePost" / Segment) { (userID, postID) => {
         get {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + userID)
@@ -70,6 +75,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //display a profile
       path("users" / "getProfile" / Segment) { (profileID) => {
         get {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + profileID)
@@ -82,6 +88,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //read a friend list
       path("users" / Segment / "getFriendList") { (userID) => {
         get {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`application/json`) {
             complete {
               val userActor = context.actorSelection(userActorBasePath + userID)
@@ -94,6 +101,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //Add a wall post
       path("users" / Segment / "posts" / "post") { (userID) => {
         post {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[WallPost]) { wallPost =>
               complete {
@@ -108,6 +116,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //Add a friend
       path("users" / Segment / "addFriend") { (userID) => {
         post {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { friendToAdd =>
               complete {
@@ -122,6 +131,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //delete a wall post
       path("users" / Segment / "posts" / "delete") { (userID) => {
         delete {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { wallPostID =>
               complete {
@@ -136,6 +146,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //remove a friend
       path("users" / Segment / "friends" / "delete") { (userID) => {
         delete {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { friendID =>
               complete {
@@ -150,6 +161,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ // edit a profile
       path("users" / Segment / "editProfile") { (userID) => {
         put {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[User]) { user =>
               complete {
@@ -164,6 +176,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //edit a post for a user
       path("users" / Segment / "posts" / "editPost") { (userID) => {
         put {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[WallPost]) { wallPost: WallPost =>
               complete {
@@ -178,6 +191,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //get all users
       path("users" / "getAllUsers") {
         get {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`application/json`) {
             complete {
               {
@@ -191,12 +205,13 @@ trait RestApi extends HttpService with ActorLogging {
       }~ //add a user
       path("users" / "addUser") {
         post {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { name =>
             complete {
               {
                 val masterActor = context.actorSelection(masterActorBasePath)
-                masterActor ! AddUser(name)
+                masterActor ! AddUser(name, "")//implement
                 "OK"
               }
             }}
@@ -205,6 +220,7 @@ trait RestApi extends HttpService with ActorLogging {
       }~ //delete a user
       path("users" / "deleteUser") {
         delete {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { idToDelete =>
             complete {
@@ -230,9 +246,23 @@ trait RestApi extends HttpService with ActorLogging {
             }
           }
         }
+      }~ //get number of pages
+      path("pages" / "getNumberOfPages") {
+        get {
+          respondWithMediaType(`application/json`) {
+            complete {
+              {
+                val masterActor = context.actorSelection(masterActorBasePath)
+                val future: Int = Await.result(masterActor ? GetNumberOfPages(), timeout.duration).asInstanceOf[Int]
+                future.toString
+              }
+            }
+          }
+        }
       }~ //get a page
       path("pages" / "getPage" / Segment) { pageID =>
       get {
+        statisticsActor ! RequestStatistics()
         respondWithMediaType(`application/json`) {
           complete {
             {
@@ -246,6 +276,7 @@ trait RestApi extends HttpService with ActorLogging {
     }~ // edit a page
       path("pages" / Segment / "editPage") { (pageID) => {
         put {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[Page]) { page =>
               complete {
@@ -260,6 +291,7 @@ trait RestApi extends HttpService with ActorLogging {
       } ~ //add a page
       path("pages" / "addPage") {
         post {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { string =>
               complete {
@@ -274,6 +306,7 @@ trait RestApi extends HttpService with ActorLogging {
       }~ //delete a page
       path("pages" / "deletePage") {
         delete {
+          statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
             entity(as[String]) { idToDelete =>
               complete {
@@ -290,5 +323,40 @@ trait RestApi extends HttpService with ActorLogging {
 
   }
 
+
+
+}
+
+case class RequestStatistics()
+
+class StatisticsActor extends Actor{
+
+
+  var totalRequestsReceived: Long = 0
+  var isFirstRequest: Boolean = true
+  var startTime: Long = 0
+  var endTime: Long = 0
+
+  def requestStatistics() = {
+    if(isFirstRequest){
+      startTime = System.currentTimeMillis()
+    }
+    totalRequestsReceived = totalRequestsReceived + 1
+    isFirstRequest = false
+    if(totalRequestsReceived%1000 == 0)
+    {
+      endTime = System.currentTimeMillis()
+      val avg: BigDecimal = (totalRequestsReceived*1000/(endTime-startTime))
+      println("Average number of requests served per second: " + avg.toString() + " for " + totalRequestsReceived + " requests received in " + (endTime-startTime) + "ms")
+      /*println(totalRequestsReceived)
+      println(endTime - startTime)*/
+    }
+  }
+
+  def receive = {
+    case RequestStatistics() => {
+      requestStatistics()
+    }
+  }
 }
 
