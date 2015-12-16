@@ -1,10 +1,6 @@
 package com.ramitsuri.project4
 
-import java.security.PublicKey
-
 import akka.actor.Actor
-import scala.collection.mutable
-
 
 //Message classes for User Actor
 case class GetUserDetails()
@@ -33,19 +29,11 @@ case class Message1()
 
 case class Message2()
 
-case class UpdateAESKeys(keys:Vector[String])
-
-case class Check()
-
-class UserActor(id: String, var name: String, var keys1: Vector[String]) extends Actor {
-  var keys = keys1
-  var userInfo: User = new User(id, name, Vector[WallPost](), keys)
+class UserActor(id: String, var name: String, privateKey: String) extends Actor {
+  var userInfo: User = new User(id, name, Vector[WallPost](), privateKey)
   var friendList: FriendList = new FriendList(id, Vector[String]())
   var profile: Profile = new Profile(id, userInfo, friendList)
   var postsCount = getPostsCount()
-
-  /*var aesKeyForPost: String = keys.privateAESforPost
-  var aesKeyForName: String = keys.privateAESforName*/
 
   def getUserInfo() = {
     userInfo
@@ -70,7 +58,7 @@ class UserActor(id: String, var name: String, var keys1: Vector[String]) extends
   }
 
   def addWallPost(wallPost: WallPost) = {
-    userInfo.posts = userInfo.posts :+ new WallPost((postsCount+1).toString, postedBy = wallPost.postedBy, content = wallPost.content, sharedWith = wallPost.sharedWith)
+    userInfo.posts = userInfo.posts :+ new WallPost((postsCount+1).toString, postedBy = wallPost.postedBy, content = wallPost.content)
     updatePostCount()
     updateProfile()
   }
@@ -109,10 +97,6 @@ class UserActor(id: String, var name: String, var keys1: Vector[String]) extends
 
   def getProfile() = {
     profile
-  }
-
-  def updateAESKeys(keys: Vector[String]) ={
-    this.keys = keys
   }
 
 
@@ -163,19 +147,12 @@ class UserActor(id: String, var name: String, var keys1: Vector[String]) extends
 
     }
 
-    case UpdateAESKeys(keys) => {
-      updateAESKeys(keys)
-    }
-
-    case Check() => {
-      println("working")
-    }
 
   }
 
-  implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts, keys = user.keys)
+  implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts, privateKey = user.privateKey)
 
-  implicit def toPost(post: WallPost): WallPost = WallPost(id = post.id, postedBy = post.postedBy, content = post.content, sharedWith = post.sharedWith)
+  implicit def toPost(post: WallPost): WallPost = WallPost(id = post.id, postedBy = post.postedBy, content = post.content)
 
   implicit def toFriendList(friendList: FriendList): FriendList = FriendList(owner = friendList.owner, members = friendList.members)
 }

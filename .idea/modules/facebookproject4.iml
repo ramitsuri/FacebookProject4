@@ -59,6 +59,5 @@
     <orderEntry type="library" scope="TEST" name="SBT: org.scalatest:scalatest_2.11:2.2.4:jar" level="project" />
     <orderEntry type="library" name="SBT: org.slf4j:slf4j-api:1.7.5:jar" level="project" />
     <orderEntry type="library" name="SBT: org.uncommons.maths:uncommons-maths:1.2.2a:jar" level="project" />
-    <orderEntry type="library" name="SBT: commons-codec:commons-codec:1.9:jar" level="project" />
   </component>
 </module>

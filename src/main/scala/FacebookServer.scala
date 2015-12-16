@@ -1,6 +1,5 @@
 package com.ramitsuri.project4
 
-import java.security.PublicKey
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorLogging, Props, ActorSystem, Actor}
@@ -20,6 +19,7 @@ class FacebookServer extends HttpServiceActor with RestApi {
 trait RestApi extends HttpService with ActorLogging {
   actor: Actor =>
   implicit val timeout = Timeout(10 seconds)
+
 
   val masterActor = context.actorOf(Props(new MasterActor(10000, 1000)), name = "masterActor")
   masterActor ! Start()
@@ -207,11 +207,11 @@ trait RestApi extends HttpService with ActorLogging {
         post {
           statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
-            entity(as[User]) { user =>
+            entity(as[String]) { name =>
             complete {
               {
                 val masterActor = context.actorSelection(masterActorBasePath)
-                masterActor ! AddUser(user.name, user.keys)
+                masterActor ! AddUser(name, "")//implement
                 "OK"
               }
             }}
@@ -319,21 +319,6 @@ trait RestApi extends HttpService with ActorLogging {
             }
           }
         }
-      }~ //update aes keys
-      path("users" / Segment / "updateKeys") { (userID) => {
-        put {
-          statisticsActor ! RequestStatistics()
-          respondWithMediaType(`text/plain`) {
-            entity(as[Vector[String]]) { keys: Vector[String] =>
-              complete {
-                val userActor = context.actorSelection(userActorBasePath + userID)
-                userActor ! UpdateAESKeys(keys)
-                "OK"
-              }
-            }
-          }
-        }
-      }
       }
 
   }

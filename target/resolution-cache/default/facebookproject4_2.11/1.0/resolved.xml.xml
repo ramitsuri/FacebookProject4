@@ -4,7 +4,7 @@
 		module="facebookproject4_2.11"
 		revision="1.0"
 		status="integration"
-		publication="20151215193823"
+		publication="20151126185434"
 	>
 		<description>
 		FacebookProject4
@@ -47,6 +47,5 @@
 		<dependency org="net.liftweb" name="lift-json_2.11" rev="2.6.2" conf="compile->default(compile)"/>
 		<dependency org="com.typesafe.akka" name="akka-slf4j_2.11" rev="2.3.11" conf="compile->default(compile)"/>
 		<dependency org="ch.qos.logback" name="logback-classic" rev="1.0.13" conf="compile->default(compile)"/>
-		<dependency org="commons-codec" name="commons-codec" rev="1.9" conf="compile->default(compile)"/>
 	</dependencies>
 </ivy-module>
