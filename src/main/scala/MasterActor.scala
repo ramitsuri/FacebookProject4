@@ -6,14 +6,14 @@ import akka.actor.{Props, Actor}
 import akka.util.Timeout
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
+import scala.collection.mutable
 
 //Message classes for Master Actor
 case class Start()
 
 case class GetAllUsers()
 
-case class AddUser(name: String, privateKey: String)
+case class AddUser(name: String, keys: Vector[String])
 
 case class DeleteUser(id: String)
 
@@ -66,12 +66,12 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     users.toArray
   }
 
-  def addUser(name: String, privateKey: String) = {
+  def addUser(name: String, keys: Vector[String]) = {
     //numberOfUsers = numberOfUsers + 1
     lastID = lastID + 1
-    var user = context.actorOf(Props(new UserActor(lastID.toString, name, privateKey)), name = "user" + lastID)
+    var user = context.actorOf(Props(new UserActor(lastID.toString, name, keys)), name = "user" + lastID)
     usersIDs = usersIDs :+ lastID.toString
-    println("added " + lastID)
+    println("added " + lastID + " " + name)
   }
 
   def deleteUser(id: String) = {
@@ -114,8 +114,8 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
       sender ! getAllUsers()
     }
 
-    case AddUser(name: String, privateKey: String) => {
-      addUser(name, privateKey)
+    case AddUser(name: String, keys: Vector[String]) => {
+      addUser(name, keys)
     }
 
     case DeleteUser(id: String) => {

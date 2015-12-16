@@ -703,9 +703,9 @@
 [debug] 	[NOT REQUIRED] org.scala-sbt#test-agent;0.13.8!test-agent.jar
 [debug] 	[NOT REQUIRED] org.scala-sbt#test-interface;1.0!test-interface.jar
 [debug] 	[NOT REQUIRED] org.scala-sbt#apply-macro;0.13.8!apply-macro.jar
-[debug] :: resolution report :: resolve 1132ms :: artifacts dl 61ms
+[debug] :: resolution report :: resolve 1249ms :: artifacts dl 52ms
 [debug] 	report for default#facebookproject4$sbt_2.11;1.0 default produced in C:\Users\ramit\IdeaProjects\FacebookProject4\target\resolution-cache\reports\default-facebookproject4$sbt_2.11-default.xml
-[debug] 	resolve done (1132ms resolve - 61ms download)
+[debug] 	resolve done (1249ms resolve - 52ms download)
 [debug] Using inline dependencies specified in Scala.
 [debug] :: resolving dependencies :: default#facebookproject4$sources_2.11;1.0
 [debug] 	confs: [default]
@@ -1069,6 +1069,6 @@
 [debug] 	[NOT REQUIRED] org.scala-sbt#precompiled-2_8_2;0.13.8!precompiled-2_8_2.jar(src)
 [debug] 	[NOT REQUIRED] org.scala-sbt#precompiled-2_9_2;0.13.8!precompiled-2_9_2.jar(src)
 [debug] 	[NOT REQUIRED] org.scala-sbt#precompiled-2_9_3;0.13.8!precompiled-2_9_3.jar(src)
-[debug] :: resolution report :: resolve 187ms :: artifacts dl 60ms
+[debug] :: resolution report :: resolve 401ms :: artifacts dl 57ms
 [debug] 	report for default#facebookproject4$sources_2.11;1.0 default produced in C:\Users\ramit\IdeaProjects\FacebookProject4\target\resolution-cache\reports\default-facebookproject4$sources_2.11-default.xml
-[debug] 	resolve done (187ms resolve - 60ms download)
+[debug] 	resolve done (401ms resolve - 57ms download)
