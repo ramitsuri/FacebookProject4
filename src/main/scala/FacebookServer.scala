@@ -21,7 +21,7 @@ trait RestApi extends HttpService with ActorLogging {
   implicit val timeout = Timeout(10 seconds)
 
 
-  val masterActor = context.actorOf(Props(new MasterActor(10000, 1000)), name = "masterActor")
+  val masterActor = context.actorOf(Props(new MasterActor(100, 1000)), name = "masterActor")
   masterActor ! Start()
 
   val statisticsActor = context.actorOf((Props(new StatisticsActor)), name = "statisticsActor")
@@ -207,11 +207,11 @@ trait RestApi extends HttpService with ActorLogging {
         post {
           statisticsActor ! RequestStatistics()
           respondWithMediaType(`text/plain`) {
-            entity(as[String]) { name =>
+            entity(as[User]) { user =>
             complete {
               {
                 val masterActor = context.actorSelection(masterActorBasePath)
-                masterActor ! AddUser(name, "")//implement
+                masterActor ! AddUser(user.name, user.publicKey)
                 "OK"
               }
             }}

@@ -1,8 +1,13 @@
 package com.ramitsuri.project4
 
+import java.security._
+import java.util
 import java.util.concurrent.TimeUnit
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
 
 import akka.actor.{Cancellable, Props, Actor, ActorSystem}
+import org.apache.commons.codec.binary.Base64
 import spray.client.pipelining._
 import spray.http.HttpRequest
 import spray.httpx.SprayJsonSupport._
@@ -86,12 +91,16 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
   val interval2 = int2
   val numberOfUsers = numOfUsers
   val timeout = 15.seconds
-  var profile: Profile = new Profile("", new User("", "", Vector[WallPost](), ""), new FriendList("", Vector[String]()))
+  var profile: Profile = new Profile("", new User("", "", Vector[WallPost](), Array[Byte]()), new FriendList("", Vector[String]()))
   private var scheduler1: Cancellable = _
   private var scheduler2: Cancellable = _
   private var scheduler3: Cancellable = _
-  private var privateAESKeyForName: String = generatePrivateKeyForAES()
-  private var privateAESKeyForPost: String = generatePrivateKeyForAES()
+  //private var privateAESKeyForName: String = generatePrivateKeyForAES()
+  //private var privateAESKeyForPost: String = generatePrivateKeyForAES()
+  var keyPair = RSA.getKeyPair()
+  var publicKey = keyPair.getPublic()
+  var privateKey = keyPair.getPrivate()
+  var publicKeyBA = publicKey.getEncoded
   implicit val clientSystem = sys
   val clientUserActorBasePath = "akka://ClientSystem/user/clientUserActor"
   import clientSystem.dispatcher
@@ -126,14 +135,16 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
     case SignUpUser() => {
 
       try{
-        val name = Encryption.AES.encrypt(privateAESKeyForName, "name" + userID )
+        val aesKey = generatePrivateKeyForAES()
+        println(self.path)
+        var userToSignup = new User(id = "", name = AES.encrypt(aesKey, "name" + userID )+ ", " + RSA.encrypt(aesKey, publicKey), posts = Vector[WallPost](), publicKey = publicKeyBA)
         val pipelineAddUser: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
-        val futureAddUser: Future[String] = pipelineAddUser(Post(s"%s%s".format(apiLocation, "/users/addUser"), name))
+        val futureAddUser: Future[String] = pipelineAddUser(Post(s"%s%s".format(apiLocation, "/users/addUser"), userToSignup ))
         val result2 = Await.result(futureAddUser, timeout)
       }
-      catch {
-        case ex: java.util.concurrent.TimeoutException => {}
-      }
+      /*catch {
+        case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
+      }*/
     }
 
     case StartScheduledTasks() => {
@@ -151,23 +162,26 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         val futureGetProfile: Future[Profile] = pipelineGetProfile(Get(s"%s%s%d".format(apiLocation, "/users/getProfile/", userID)))
         val result2 = Await.result(futureGetProfile, timeout)
         profile = result2
-        println("User "+ Encryption.AES.decrypt(privateAESKeyForName, result2.user.name))
+        val combinedName = result2.user.name
+        val name = combinedName.split(",")(0)
+        println("User "+ AES.decrypt(RSA.decrypt(combinedName.split(",")(1), privateKey), name))
 
         val pipelineAddFriend: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futureAddFriend: Future[String] = pipelineAddFriend(Post(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/addFriend"), "user" + randomID))
         val result3 = Await.result(futureAddFriend, timeout)
         println("Friended " + result3)
 
-        val post: WallPost = new WallPost("", "user" + randomID, Encryption.AES.encrypt(privateAESKeyForPost, "This is a new wall post"))
+        val aesKey= generatePrivateKeyForAES()
+        val post: WallPost = new WallPost("", "user" + randomID, Encryption.AES.encrypt(aesKey, "This is a new wall post") + ", " + RSA.encrypt(aesKey, publicKey))
         val pipelinePostOnWall: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futurePostOnWall: Future[String] = pipelinePostOnWall(Post(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/posts/post"), post))
         val result1 = Await.result(futurePostOnWall, timeout)
         println("Posted " + result1)
       }
-      catch {
-        case ex: java.util.concurrent.TimeoutException => {}
-        case ex: Exception => {}
-      }
+      /*catch {
+        case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
+        case ex: Exception => {ex.getMessage}
+      }*/
     }
 
     case UserRequestBatch2() => {
@@ -181,19 +195,74 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         val result1 = Await.result(futureFriendList, timeout)
         println(result1.members.length + " Friends")
 
-        val newName = Encryption.AES.encrypt(privateAESKeyForName, "new name")
-        val updatedUser = new User(profile.user.id, newName, profile.user.posts, profile.user.privateKey)
+        val aesKey = generatePrivateKeyForAES()
+        val newName = Encryption.AES.encrypt(aesKey, "new name")+ ", " + RSA.encrypt(aesKey, publicKey)
+        val updatedUser = new User(profile.user.id, newName, profile.user.posts, profile.user.publicKey)
         val pipelineEditProfile: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futureEditProfile: Future[String] = pipelineEditProfile(Put(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/editProfile"), updatedUser))
         val result2 = Await.result(futureEditProfile, timeout)
         println("Updated profile " + result2)
       }
-      catch {
-        case ex: java.util.concurrent.TimeoutException => {}
-        case ex: Exception => {}
-      }
+      /*catch {
+        case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
+        case ex: Exception => {ex.getMessage}
+      }*/
     }
   }
+
+  object RSA {
+
+    def getKeyPair() : KeyPair = {
+      val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
+      keyPairGenerator.initialize(2048)
+      val keyPair = keyPairGenerator.generateKeyPair()
+      keyPair
+    }
+
+    def encrypt(dataToEncrypt: String, publicKey: PublicKey) : String = {
+
+      val cipher = Cipher.getInstance("RSA")
+      cipher.init(Cipher.ENCRYPT_MODE, publicKey)
+      val encryptedBytes = cipher.doFinal(dataToEncrypt.getBytes());
+      val encryptedtext = new String(Base64.encodeBase64(encryptedBytes));
+      encryptedtext
+    }
+
+    def decrypt(dataToDecrypt: String, privateKey: PrivateKey): String = {
+      val cipher = Cipher.getInstance("RSA")
+      cipher.init(Cipher.DECRYPT_MODE, privateKey)
+      val encryptedtextBytes = Base64.decodeBase64(dataToDecrypt.getBytes());
+      val decryptedBytes = cipher.doFinal(encryptedtextBytes);
+      val decryptedString = new String(decryptedBytes);
+      decryptedString
+    }
+  }
+
+  object AES {
+
+    private val SALT: String = "jMhKlOuJnM34G6NHkqo9V010GhLAqOpF0BePojHgh1HgNg8^72k"
+
+    def encrypt(key: String, value: String): String = {
+      val cipher: Cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+      cipher.init(Cipher.ENCRYPT_MODE, keyToSpec(key))
+      Base64.encodeBase64String(cipher.doFinal(value.getBytes("UTF-8")))
+    }
+
+    def decrypt(key: String, encryptedValue: String): String = {
+      val cipher: Cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING")
+      cipher.init(Cipher.DECRYPT_MODE, keyToSpec(key))
+      new String(cipher.doFinal(Base64.decodeBase64(encryptedValue)))
+    }
+
+    def keyToSpec(key: String): SecretKeySpec = {
+      var keyBytes: Array[Byte] = (SALT + key).getBytes("UTF-8")
+      val sha: MessageDigest = MessageDigest.getInstance("SHA-1")
+      keyBytes = sha.digest(keyBytes)
+      keyBytes = util.Arrays.copyOf(keyBytes, 16)
+      new SecretKeySpec(keyBytes, "AES")
+    }
+  }
+
 }
 
 
@@ -240,10 +309,12 @@ class ClientPageActor(id: Int, sys: ActorSystem, apiLocation: String, numOfPages
         println("Page edited " + result3)
 
       }
-      catch {
-        case ex: java.util.concurrent.TimeoutException => {}
-      }
+      /*catch {
+        case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
+      }*/
     }
   }
 }
+
+
 

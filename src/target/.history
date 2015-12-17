@@ -1,0 +1,8 @@
+compile
+run project4.scala
+run project4
+run
+run project4.class
+run project4
+run project4 project4.scala
+scalac project4.scala

@@ -29,12 +29,12 @@ case class Message1()
 
 case class Message2()
 
-class UserActor(id: String, var name: String, privateKey: String) extends Actor {
-  var userInfo: User = new User(id, name, Vector[WallPost](), privateKey)
+class UserActor(id: String, var name: String, publicKey: Array[Byte]) extends Actor {
+  var userInfo: User = new User(id, name, Vector[WallPost](), publicKey)
   var friendList: FriendList = new FriendList(id, Vector[String]())
   var profile: Profile = new Profile(id, userInfo, friendList)
   var postsCount = getPostsCount()
-
+  var publicKey1 = publicKey
   def getUserInfo() = {
     userInfo
   }
@@ -150,7 +150,7 @@ class UserActor(id: String, var name: String, privateKey: String) extends Actor 
 
   }
 
-  implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts, privateKey = user.privateKey)
+  implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts, publicKey = user.publicKey)
 
   implicit def toPost(post: WallPost): WallPost = WallPost(id = post.id, postedBy = post.postedBy, content = post.content)
 

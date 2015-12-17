@@ -1,5 +1,6 @@
 package com.ramitsuri.project4
 
+import java.security.PublicKey
 import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.actor.{Props, Actor}
@@ -13,7 +14,7 @@ case class Start()
 
 case class GetAllUsers()
 
-case class AddUser(name: String, privateKey: String)
+case class AddUser(name: String, publicKey: Array[Byte])
 
 case class DeleteUser(id: String)
 
@@ -66,10 +67,10 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     users.toArray
   }
 
-  def addUser(name: String, privateKey: String) = {
+  def addUser(name: String, publicKey: Array[Byte]) = {
     //numberOfUsers = numberOfUsers + 1
     lastID = lastID + 1
-    var user = context.actorOf(Props(new UserActor(lastID.toString, name, privateKey)), name = "user" + lastID)
+    var user = context.actorOf(Props(new UserActor(lastID.toString, name, publicKey)), name = "user" + lastID)
     usersIDs = usersIDs :+ lastID.toString
     println("added " + lastID  + name)
   }
@@ -114,8 +115,8 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
       sender ! getAllUsers()
     }
 
-    case AddUser(name: String, privateKey: String) => {
-      addUser(name, privateKey)
+    case AddUser(name: String, publicKey: Array[Byte]) => {
+      addUser(name, publicKey)
     }
 
     case DeleteUser(id: String) => {

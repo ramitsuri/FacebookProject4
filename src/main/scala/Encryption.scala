@@ -1,6 +1,7 @@
 package com.ramitsuri.project4
 
 import java.security._
+import java.security.spec.X509EncodedKeySpec
 import java.util
 import javax.crypto.{ Cipher}
 import javax.crypto.spec.SecretKeySpec
@@ -17,6 +18,7 @@ object Encryption {
       val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
       keyPairGenerator.initialize(2048)
       val keyPair = keyPairGenerator.generateKeyPair()
+
       keyPair
     }
 
@@ -67,14 +69,18 @@ object Encryption {
 
 
 }
-/*object maindshu extends App{
+object maindshu extends App{
   val snjd = "hellkfdsdblsjdjsckjdkjckdvkfvkfkvnkjdfkvfdkfdnjsvnjfvkjfd kjvd jkv jdf kjvdfnjnvldfnlksdbkjdcjdow"
   val kp:KeyPair = Encryption.RSA.getKeyPair()
-  println(kp.getPublic())
+
+  val btarr: Array[Byte] = kp.getPublic.getEncoded
+  val pubk = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(btarr))
+  println(Encryption.RSA.decrypt(Encryption.RSA.encrypt(snjd, pubk), kp.getPrivate))
+ /* println(kp.getPublic())
   val sa = kp.getPublic()
 
   println(sa.hashCode())
 
   println(Encryption.RSA.encrypt(snjd, kp.getPublic()))
-println(Encryption.RSA.decrypt(Encryption.RSA.encrypt(snjd, kp.getPublic()), kp.getPrivate))
-}*/
+println(Encryption.RSA.decrypt(Encryption.RSA.encrypt(snjd, kp.getPublic()), kp.getPrivate))*/
+}
