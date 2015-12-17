@@ -57,6 +57,11 @@ object Client extends App {
 
   println("Creating actors for users and pages")
 
+
+  for(i<- 1 to numOfPages){
+    clientSystem.actorOf(Props(new ClientPageActor(i, clientSystem, apiLocation, numOfPages, batchPages )))
+  }
+
   for(i <- 1 to numOfUsers1){
     clientSystem.actorOf(Props(new ClientUserActor(i, clientSystem, apiLocation, numOfUsers, batch1Time1, batch1Time2 )), name = "clientActor" + i)
     clientSystem.actorSelection(clientUserActorBasePath + i) ! SignUpUser()
@@ -72,14 +77,10 @@ object Client extends App {
     clientSystem.actorSelection(clientUserActorBasePath + i) ! SignUpUser()
     }
 
-  Thread.sleep(1000)
+  Thread.sleep(10000)
 
   for(i<- 1 to numOfUsers){
     clientSystem.actorSelection(clientUserActorBasePath + i) ! StartScheduledTasks()
-  }
-
-  for(i<- 1 to numOfPages){
-    clientSystem.actorOf(Props(new ClientPageActor(i, clientSystem, apiLocation, numOfPages, batchPages )))
   }
 
 }
@@ -172,7 +173,7 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         println("Friended " + result3)
 
         val aesKey= generatePrivateKeyForAES()
-        val post: WallPost = new WallPost("", "user" + randomID, Encryption.AES.encrypt(aesKey, "This is a new wall post") + ", " + RSA.encrypt(aesKey, publicKey))
+        val post: WallPost = new WallPost("", "user" + randomID, AES.encrypt(aesKey, "This is a new wall post") + ", " + RSA.encrypt(aesKey, publicKey))
         val pipelinePostOnWall: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futurePostOnWall: Future[String] = pipelinePostOnWall(Post(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/posts/post"), post))
         val result1 = Await.result(futurePostOnWall, timeout)
@@ -196,7 +197,7 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         println(result1.members.length + " Friends")
 
         val aesKey = generatePrivateKeyForAES()
-        val newName = Encryption.AES.encrypt(aesKey, "new name")+ ", " + RSA.encrypt(aesKey, publicKey)
+        val newName = AES.encrypt(aesKey, "new name")+ ", " + RSA.encrypt(aesKey, publicKey)
         val updatedUser = new User(profile.user.id, newName, profile.user.posts, profile.user.publicKey)
         val pipelineEditProfile: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futureEditProfile: Future[String] = pipelineEditProfile(Put(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/editProfile"), updatedUser))

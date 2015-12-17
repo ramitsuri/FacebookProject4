@@ -29,6 +29,8 @@ case class Message1()
 
 case class Message2()
 
+case class GetPublicKey()
+
 class UserActor(id: String, var name: String, publicKey: Array[Byte]) extends Actor {
   var userInfo: User = new User(id, name, Vector[WallPost](), publicKey)
   var friendList: FriendList = new FriendList(id, Vector[String]())
@@ -99,6 +101,11 @@ class UserActor(id: String, var name: String, publicKey: Array[Byte]) extends Ac
     profile
   }
 
+  def getPublicKey() = {
+    println("user " + publicKey1)
+    publicKey1
+  }
+
 
   def receive = {
     case GetUserDetails() => {
@@ -145,6 +152,10 @@ class UserActor(id: String, var name: String, publicKey: Array[Byte]) extends Ac
 
     case Message2() => {
 
+    }
+
+    case GetPublicKey() => {
+      sender ! getPublicKey()
     }
 
 

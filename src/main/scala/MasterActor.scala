@@ -7,7 +7,7 @@ import akka.actor.{Props, Actor}
 import akka.util.Timeout
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
+import scala.concurrent.duration._
 
 //Message classes for Master Actor
 case class Start()
@@ -28,6 +28,7 @@ case class DeletePage(id: String)
 
 case class Test()
 
+case class GetPublicKeys(ids: Array[String])
 
 class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
 
@@ -44,9 +45,9 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
 
   def start() = {
     /*for (i <- 1 to numberOfUsers) {*/
-      //var user = context.actorOf(Props(new UserActor(i.toString, "name" + i)), name = "user" + i)
-      //usersIDs = usersIDs :+ i.toString
-   /* }*/
+    //var user = context.actorOf(Props(new UserActor(i.toString, "name" + i)), name = "user" + i)
+    //usersIDs = usersIDs :+ i.toString
+    /* }*/
 
     for (i <- 1 to numberOfPages) {
       var page = context.actorOf(Props(new PagesActor(i.toString, "owner" + i, "name" + i)), name = "page" + i)
@@ -55,7 +56,7 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
   }
 
   def getAllUsers() = {
-    if(!hasRunOnceUsers) {
+    if (!hasRunOnceUsers) {
       for (i <- 1 to numberOfUsers) {
         val userActor = context.actorSelection(userActorBasePath + i)
         implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
@@ -72,7 +73,7 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     lastID = lastID + 1
     var user = context.actorOf(Props(new UserActor(lastID.toString, name, publicKey)), name = "user" + lastID)
     usersIDs = usersIDs :+ lastID.toString
-    println("added " + lastID  + name)
+    println("added " + lastID + name)
   }
 
   def deleteUser(id: String) = {
@@ -90,7 +91,7 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
 
   def addPage(name: String, owner: String) = {
     numberOfPages = numberOfPages + 1
-    var page = context.actorOf(Props(new PagesActor(numberOfPages.toString, owner , name)), name = "page" + numberOfPages)
+    var page = context.actorOf(Props(new PagesActor(numberOfPages.toString, owner, name)), name = "page" + numberOfPages)
     pageIDs = pageIDs :+ numberOfPages.toString
   }
 
@@ -99,7 +100,20 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     pages = pages.filterNot(_.id == pageIDToDelete)
   }
 
-  
+  def getPublicKeys(ids: Array[String]) = {
+    var keys: Vector[Array[Byte]] = Vector[Array[Byte]]()
+    implicit val timeout = Timeout(Duration(10, TimeUnit.SECONDS))
+
+    for (id <- ids) {
+      val userActor = context.actorSelection(userActorBasePath + id)
+      val future: Array[Byte] = Await.result(userActor ? GetPublicKey(), timeout.duration).asInstanceOf[Array[Byte]]
+      println("master" + future)
+      keys = keys :+ future
+    }
+    println("length" + keys.length)
+    keys.toArray
+  }
+
 
   def receive = {
 
@@ -138,8 +152,10 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
     case GetNumberOfPages() => {
       sender ! getNumberOfPages()
     }
-    
 
+    case GetPublicKeys(ids: Array[String]) => {
+      getPublicKeys(ids)
+    }
 
   }
 

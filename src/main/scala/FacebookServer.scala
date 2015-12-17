@@ -18,7 +18,7 @@ class FacebookServer extends HttpServiceActor with RestApi {
 
 trait RestApi extends HttpService with ActorLogging {
   actor: Actor =>
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(20 seconds)
 
 
   val masterActor = context.actorOf(Props(new MasterActor(100, 1000)), name = "masterActor")
@@ -316,6 +316,22 @@ trait RestApi extends HttpService with ActorLogging {
                   "OK"
                 }
               }
+            }
+          }
+        }
+      }~ //get public keys for a list of IDS
+      path("keys" / "getKeys") {
+        post {
+          statisticsActor ! RequestStatistics()
+          respondWithMediaType(`application/json`) {
+            entity(as[Array[String]]){ iDS =>
+            complete {
+              {
+                val masterActor = context.actorSelection(masterActorBasePath)
+                val future: Array[Array[Byte]] = Await.result(masterActor ? GetPublicKeys(iDS), timeout.duration).asInstanceOf[Array[Array[Byte]]]
+                future
+              }
+            }
             }
           }
         }
