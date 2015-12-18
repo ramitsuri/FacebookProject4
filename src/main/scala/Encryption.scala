@@ -7,6 +7,7 @@ import javax.crypto.{ Cipher}
 import javax.crypto.spec.SecretKeySpec
 import akka.actor.{Props, ActorSystem, Actor}
 import akka.util.Timeout
+import com.ramitsuri.project4.Encryption.{AES, DS}
 import org.apache.commons.codec.binary.Base64
 
 
@@ -67,15 +68,37 @@ object Encryption {
 
   }
 
+  object DS{
+    def sign(data: String, privateKey: PrivateKey) = {
+      val bytes = data.getBytes
+       val sig  = Signature.getInstance("MD5WithRSA")
+      sig.initSign(privateKey)
+      sig.update(bytes)
+      val signatureBytes = sig.sign()
+      signatureBytes
+      /*println("Singature:" + Base64.encodeBase64(signatureBytes))
+
+
+      println(sig.verify(signatureBytes))*/
+      }
+
+    def verify(data: String, signatureBytes: Array[Byte], publicKey: PublicKey) = {
+      val sig  = Signature.getInstance("MD5WithRSA")
+      sig.initVerify(publicKey)
+      sig.update(data.getBytes)
+      sig.verify(signatureBytes)
+    }
+  }
+
 
 }
 object maindshu extends App{
-  val snjd = "hellkfdsdblsjdjsckjdkjckdvkfvkfkvnkjdfkvfdkfdnjsvnjfvkjfd kjvd jkv jdf kjvdfnjnvldfnlksdbkjdcjdow"
+  /*val snjd = "hellkfdsdblsjdjsckjdkjckdvkfvkfkvnkjdfkvfdkfdnjsvnjfvkjfd kjvd jkv jdf kjvdfnjnvldfnlksdbkjdcjdow"
   val kp:KeyPair = Encryption.RSA.getKeyPair()
 
   val btarr: Array[Byte] = kp.getPublic.getEncoded
   val pubk = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(btarr))
-  println(Encryption.RSA.decrypt(Encryption.RSA.encrypt(snjd, pubk), kp.getPrivate))
+  println(Encryption.RSA.decrypt(Encryption.RSA.encrypt(snjd, pubk), kp.getPrivate))*/
  /* println(kp.getPublic())
   val sa = kp.getPublic()
 
@@ -83,4 +106,17 @@ object maindshu extends App{
 
   println(Encryption.RSA.encrypt(snjd, kp.getPublic()))
 println(Encryption.RSA.decrypt(Encryption.RSA.encrypt(snjd, kp.getPublic()), kp.getPrivate))*/
+  /*val kp:KeyPair = Encryption.RSA.getKeyPair()
+  val data = "hellowowsnj"
+  println(DS.sign(data, kp.getPrivate))
+
+  println(DS.verify("hellwowsnj", DS.sign(data, kp.getPrivate), kp.getPublic))*/
+  val random = new java.security.SecureRandom()
+  val key = new Array[Byte](16)
+  random.nextBytes(key)
+  println(key)
+  println(Base64.encodeBase64String(key))
+  println(Base64.decodeBase64(Base64.encodeBase64String(key)))
+  println(AES.encrypt(Base64.encodeBase64String(key), "hello" ))
+  println(AES.decrypt(Base64.encodeBase64String(key),AES.encrypt(Base64.encodeBase64String(key), "hello" )))
 }

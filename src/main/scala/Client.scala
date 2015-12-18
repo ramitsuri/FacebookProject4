@@ -1,6 +1,7 @@
 package com.ramitsuri.project4
 
 import java.security._
+import java.security.spec.X509EncodedKeySpec
 import java.util
 import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
@@ -117,18 +118,21 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
   }
 
   override def postStop(): Unit = {
-    scheduler1.cancel()
-    scheduler2.cancel()
+    //scheduler1.cancel()
+    //scheduler2.cancel()
   }
   private def generatePrivateKeyForAES(): String = {
-    val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
-    val sb = new StringBuilder
-    val random = new scala.util.Random(new java.security.SecureRandom())
-    for (i <- 1 to 10) {
+    //val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
+    //val sb = new StringBuilder
+    val random = new java.security.SecureRandom()
+    val key = new Array[Byte](16)
+    random.nextBytes(key)
+    Base64.encodeBase64String(key)
+    /*for (i <- 1 to 10) {
       val randomNum = random.nextInt(chars.length)
       sb.append(chars(randomNum))
     }
-    sb.toString + userID
+    sb.toString + userID*/
   }
 
   def receive = {
@@ -143,9 +147,9 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         val futureAddUser: Future[String] = pipelineAddUser(Post(s"%s%s".format(apiLocation, "/users/addUser"), userToSignup ))
         val result2 = Await.result(futureAddUser, timeout)
       }
-      /*catch {
+      catch {
         case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
-      }*/
+      }
     }
 
     case StartScheduledTasks() => {
@@ -172,17 +176,34 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         val result3 = Await.result(futureAddFriend, timeout)
         println("Friended " + result3)
 
+
         val aesKey= generatePrivateKeyForAES()
-        val post: WallPost = new WallPost("", "user" + randomID, AES.encrypt(aesKey, "This is a new wall post") + ", " + RSA.encrypt(aesKey, publicKey))
+        val pipelineGetPublicKeys: HttpRequest => Future[Array[Array[Byte]]] = sendReceive ~> unmarshal[Array[Array[Byte]]]
+        var friends = Vector[String]("1", "2")
+        val futureGetPublicKeys: Future[Array[Array[Byte]]] = pipelineGetPublicKeys(Post(s"%s%s".format(apiLocation, "/keys/getKeys"), friends))
+        val result4 = Await.result(futureGetPublicKeys, timeout)
+        println("keys " + result4.length)
+        val kp:KeyPair = Encryption.RSA.getKeyPair()
+        val publicKeys: Array[PublicKey] = result4.map(x=>KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(x)))
+        var sharedWith = Vector[String]()
+        for(key<-publicKeys){
+          var i=0
+          sharedWith = sharedWith :+ (friends(i) + RSA.encrypt(aesKey, key))
+          i=i+1
+        }
+
+
+        val post: WallPost = new WallPost("", "user" + randomID, AES.encrypt(aesKey, "This is a new wall post") + ", " + RSA.encrypt(aesKey, publicKey), sharedWith)
         val pipelinePostOnWall: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
         val futurePostOnWall: Future[String] = pipelinePostOnWall(Post(s"%s%s%d%s".format(apiLocation, "/users/", randomID, "/posts/post"), post))
         val result1 = Await.result(futurePostOnWall, timeout)
         println("Posted " + result1)
+
       }
-      /*catch {
+      catch {
         case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
         case ex: Exception => {ex.getMessage}
-      }*/
+      }
     }
 
     case UserRequestBatch2() => {
@@ -204,10 +225,10 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
         val result2 = Await.result(futureEditProfile, timeout)
         println("Updated profile " + result2)
       }
-      /*catch {
+      catch {
         case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
         case ex: Exception => {ex.getMessage}
-      }*/
+      }
     }
   }
 
@@ -215,7 +236,6 @@ class ClientUserActor(id: Int, sys: ActorSystem, apiLocation: String,numOfUsers:
 
     def getKeyPair() : KeyPair = {
       val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-      keyPairGenerator.initialize(2048)
       val keyPair = keyPairGenerator.generateKeyPair()
       keyPair
     }
@@ -310,9 +330,9 @@ class ClientPageActor(id: Int, sys: ActorSystem, apiLocation: String, numOfPages
         println("Page edited " + result3)
 
       }
-      /*catch {
+      catch {
         case ex: java.util.concurrent.TimeoutException => {ex.getMessage}
-      }*/
+      }
     }
   }
 }

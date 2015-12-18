@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.actor.{Props, Actor}
 import akka.util.Timeout
+import org.apache.commons.codec.binary.Base64
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
@@ -108,9 +109,14 @@ class MasterActor(numOfUsers: Int, numOfPages: Int) extends Actor {
       val userActor = context.actorSelection(userActorBasePath + id)
       val future: Array[Byte] = Await.result(userActor ? GetPublicKey(), timeout.duration).asInstanceOf[Array[Byte]]
       println("master" + future)
+
+      //keys = keys :+ Base64.encodeBase64String(future)
       keys = keys :+ future
     }
-    println("length" + keys.length)
+    for(key <- keys){
+      println(key)
+    }
+    //println("length" + keys.length)
     keys.toArray
   }
 

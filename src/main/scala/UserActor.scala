@@ -60,7 +60,7 @@ class UserActor(id: String, var name: String, publicKey: Array[Byte]) extends Ac
   }
 
   def addWallPost(wallPost: WallPost) = {
-    userInfo.posts = userInfo.posts :+ new WallPost((postsCount+1).toString, postedBy = wallPost.postedBy, content = wallPost.content)
+    userInfo.posts = userInfo.posts :+ new WallPost((postsCount+1).toString, postedBy = wallPost.postedBy, content = wallPost.content, sharedWith = wallPost.sharedWith)
     updatePostCount()
     updateProfile()
   }
@@ -163,7 +163,7 @@ class UserActor(id: String, var name: String, publicKey: Array[Byte]) extends Ac
 
   implicit def toUser(user: User): User = User(id = user.id, name = user.name, posts = user.posts, publicKey = user.publicKey)
 
-  implicit def toPost(post: WallPost): WallPost = WallPost(id = post.id, postedBy = post.postedBy, content = post.content)
+  implicit def toPost(post: WallPost): WallPost = WallPost(id = post.id, postedBy = post.postedBy, content = post.content, sharedWith = post.sharedWith)
 
   implicit def toFriendList(friendList: FriendList): FriendList = FriendList(owner = friendList.owner, members = friendList.members)
 }
